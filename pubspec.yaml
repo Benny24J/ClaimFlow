@@ -1,0 +1,56 @@
+name: claimflow_africa
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  connectivity_plus: ^5.0.0
+
+  uuid: ^4.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  google_fonts: ^8.0.2
+  http: ^1.2.0
+  flutter_secure_storage: ^9.0.0
+
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.7
+
+  flutter_lints: ^6.0.0
+  hive_test: ^1.0.1
+
+  flutter_launcher_icons: ^0.13.1
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo22.png"
+  adaptive_icon_background: "#0E5936"
+  adaptive_icon_foreground: "assets/images/logo22.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/logo22.png
+    - assets/images/onb1.png
+    - assets/images/onb2.png
+    - assets/images/onb3.jpg
+    - assets/images/ins.png
+    - assets/images/fb.png
+    - assets/images/gg.png
+    - assets/images/app.png
