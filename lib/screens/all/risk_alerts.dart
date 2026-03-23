@@ -4,75 +4,17 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:claimflow_africa/theme.dart';
 import 'package:claimflow_africa/dmodels/claim_model.dart';
 import 'package:claimflow_africa/dmodels/riskflag_model.dart';
+import 'package:claimflow_africa/services/risk_evaluator.dart';
+import 'package:claimflow_africa/utils/formatters.dart';
 import 'package:claimflow_africa/widgets/claims/bottom_navigation_bar.dart';
 
 class RiskAlerts extends StatelessWidget {
   const RiskAlerts({super.key});
 
-  
-  List<RiskFlag> _evaluateRisks(ClaimModel claim) {
-    final List<RiskFlag> flags = [];
-
-    if (claim.nhiaId.isEmpty) {
-      flags.add(RiskFlag(
-        title: 'Missing NHIA ID',
-        description: 'This claim has no NHIA ID assigned.',
-        severity: 'URGENT',
-        impact: claim.totalClaimAmount,
-        stepToFix: 1,
-      ));
-    }
-
-    if (claim.diagnosisCode.isEmpty) {
-      flags.add(RiskFlag(
-        title: 'Missing Clinical Data',
-        description: 'Diagnosis code is missing.',
-        severity: 'HIGH',
-        impact: claim.totalClaimAmount,
-        stepToFix: 2,
-      ));
-    }
-
-    if (claim.procedureCode.isEmpty) {
-      flags.add(RiskFlag(
-        title: 'Invalid Provider Code',
-        description: 'Procedure code is missing or invalid.',
-        severity: 'HIGH',
-        impact: claim.totalClaimAmount,
-        stepToFix: 3,
-      ));
-    }
-
-    if (claim.totalClaimAmount > 100000) {
-      flags.add(RiskFlag(
-        title: 'High Value Claim',
-        description: 'Claim amount exceeds ₦100,000 threshold.',
-        severity: 'MEDIUM',
-        impact: claim.totalClaimAmount,
-        stepToFix: 4,
-      ));
-    }
-
-    if (claim.diagnosisCode.isNotEmpty &&
-        claim.procedureCode.isNotEmpty &&
-        claim.diagnosisCode == claim.procedureCode) {
-      flags.add(RiskFlag(
-        title: 'Mismatched Codes',
-        description: 'Diagnosis and procedure codes are identical.',
-        severity: 'MEDIUM',
-        impact: claim.totalClaimAmount,
-        stepToFix: 2,
-      ));
-    }
-
-    return flags;
-  }
-
- 
   List<Map<String, dynamic>> _buildRiskItems(List<ClaimModel> claims) {
     final List<Map<String, dynamic>> items = [];
     for (final claim in claims) {
-      for (final flag in _evaluateRisks(claim)) {
+      for (final flag in RiskEvaluator.evaluate(claim)) {
         items.add({'flag': flag, 'claim': claim});
       }
     }
@@ -125,11 +67,11 @@ class RiskAlerts extends StatelessWidget {
               urgentRisks.length + highRisks.length + mediumRisks.length;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -177,7 +119,8 @@ class RiskAlerts extends StatelessWidget {
                     const SizedBox(height: 20),
                   ],
                   if (highRisks.isNotEmpty) ...[
-                    const _SectionLabel(label: 'HIGH RISKS', isUrgent: false),
+                    const _SectionLabel(
+                        label: 'HIGH RISKS', isUrgent: false),
                     const SizedBox(height: 10),
                     ...highRisks.map((item) => _RiskCard(
                           flag: item['flag'] as RiskFlag,
@@ -208,7 +151,6 @@ class RiskAlerts extends StatelessWidget {
   }
 }
 
-
 class _SectionLabel extends StatelessWidget {
   final String label;
   final bool isUrgent;
@@ -230,7 +172,6 @@ class _SectionLabel extends StatelessWidget {
     );
   }
 }
-
 
 class _RiskCard extends StatelessWidget {
   final RiskFlag flag;
@@ -271,7 +212,6 @@ class _RiskCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Icon
           Container(
             width: 40,
             height: 40,
@@ -290,7 +230,6 @@ class _RiskCard extends StatelessWidget {
 
           const SizedBox(width: 12),
 
-          
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,12 +254,11 @@ class _RiskCard extends StatelessWidget {
             ),
           ),
 
-          
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '₦${flag.impact.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}',
+                formatNaira(flag.impact),
                 style: GoogleFonts.sourceSans3(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -355,7 +293,6 @@ class _RiskCard extends StatelessWidget {
     );
   }
 }
-
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState();

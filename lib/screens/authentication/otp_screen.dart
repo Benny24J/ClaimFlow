@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:claimflow_africa/theme.dart';
 import 'package:claimflow_africa/screens/popup/new_password.dart';
+
 class OtpVerificationScreen extends StatefulWidget {
   const OtpVerificationScreen({super.key});
 
@@ -12,18 +13,15 @@ class OtpVerificationScreen extends StatefulWidget {
 }
 
 class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
-
   final List<TextEditingController> _controllers =
       List.generate(4, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
 
-  
-  static const int _totalSeconds = 195; // 3:15
+  static const int _totalSeconds = 195;
   int _secondsRemaining = _totalSeconds;
   Timer? _timer;
   bool _canResend = false;
 
-  
   String _method = 'sms';
   String _contact = '';
 
@@ -36,7 +34,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    
     final args = ModalRoute.of(context)?.settings.arguments
         as Map<String, dynamic>?;
     if (args != null) {
@@ -58,8 +55,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     }
     super.dispose();
   }
-
-  
 
   void _startTimer() {
     _timer?.cancel();
@@ -86,14 +81,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}s';
   }
 
-  
   void _onChanged(String value, int index) {
     if (value.isNotEmpty) {
-      // Move to next box
       if (index < 3) {
         _focusNodes[index + 1].requestFocus();
       } else {
-        // Last box — dismiss keyboard
         _focusNodes[index].unfocus();
       }
     }
@@ -101,7 +93,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   void _onKeyEvent(KeyEvent event, int index) {
-    
     if (event is KeyDownEvent &&
         event.logicalKey == LogicalKeyboardKey.backspace &&
         _controllers[index].text.isEmpty &&
@@ -115,24 +106,18 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   bool get _isComplete =>
       _controllers.every((c) => c.text.isNotEmpty);
 
-
-
-
   void _verify() {
     if (!_isComplete) return;
-    // Show success dialog on verification
     showPasswordSuccessDialog(context);
   }
 
   void _resend() {
     if (!_canResend) return;
-    // Clear all boxes
     for (final c in _controllers) {
       c.clear();
     }
     _focusNodes[0].requestFocus();
     _startTimer();
-    // TODO: Trigger resend OTP API call
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -141,7 +126,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         ),
         backgroundColor: ClaimFlowColors.primary,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -160,7 +146,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Back Button
               IconButton(
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.arrow_back,
@@ -170,7 +155,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
               const SizedBox(height: 16),
 
-              // Title
               Center(
                 child: Text(
                   'Enter OTP Code',
@@ -184,7 +168,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
               const SizedBox(height: 10),
 
-              // Subtitle
               Center(
                 child: Text(
                   subtitle,
@@ -197,7 +180,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
               const SizedBox(height: 36),
 
-              // OTP Boxes
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(4, (index) {
@@ -212,7 +194,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
               const SizedBox(height: 12),
 
-              // Timer / Resend
               Align(
                 alignment: Alignment.centerRight,
                 child: _canResend
@@ -232,7 +213,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           text: 'Code expires in ',
                           style: GoogleFonts.inter(
                             fontSize: 13,
-                            color: ClaimFlowColors.textPrimary.withOpacity(0.45),
+                            color: ClaimFlowColors.textPrimary
+                                .withOpacity(0.45),
                           ),
                           children: [
                             TextSpan(
@@ -250,7 +232,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
               const SizedBox(height: 48),
 
-              // Verify Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -272,7 +253,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
               const SizedBox(height: 12),
 
-              // Sign In Button
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
@@ -296,8 +276,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 }
 
 
-
-class _OtpBox extends StatelessWidget {
+class _OtpBox extends StatefulWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final ValueChanged<String> onChanged;
@@ -311,17 +290,30 @@ class _OtpBox extends StatelessWidget {
   });
 
   @override
+  State<_OtpBox> createState() => _OtpBoxState();
+}
+
+class _OtpBoxState extends State<_OtpBox> {
+  final _keyboardFocusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _keyboardFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return KeyboardListener(
-      focusNode: FocusNode(),
-      onKeyEvent: onKeyEvent,
+      focusNode: _keyboardFocusNode,
+      onKeyEvent: widget.onKeyEvent,
       child: SizedBox(
         width: 72,
         height: 72,
         child: TextField(
-          controller: controller,
-          focusNode: focusNode,
-          onChanged: onChanged,
+          controller: widget.controller,
+          focusNode: widget.focusNode,
+          onChanged: widget.onChanged,
           textAlign: TextAlign.center,
           keyboardType: TextInputType.number,
           maxLength: 1,

@@ -1,25 +1,27 @@
 import 'package:flutter/material.dart';
-// ignore: depend_on_referenced_packages
 import 'package:google_fonts/google_fonts.dart';
 import 'package:claimflow_africa/theme.dart';
 
-class FinancialReports extends StatelessWidget {
-  const FinancialReports({super.key});
+class HelpArticle {
+  final String title;
+  final String readTime;
 
-  static const List<Map<String, String>> articles = [
-    {
-      'title': 'Understanding A/R Aging',
-      'readTime': '6 min read',
-    },
-    {
-      'title': 'Revenue Cycle Analytics',
-      'readTime': '7 min read',
-    },
-    {
-      'title': 'Payer Performance Tracking',
-      'readTime': '5 min read',
-    },
-  ];
+  const HelpArticle({required this.title, required this.readTime});
+}
+
+class HelpTopicDetailScreen extends StatelessWidget {
+  final String topicTitle;
+  final IconData topicIcon;
+  final Color iconColor;
+  final List<HelpArticle> articles;
+
+  const HelpTopicDetailScreen({
+    super.key,
+    required this.topicTitle,
+    required this.topicIcon,
+    required this.iconColor,
+    required this.articles,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +31,6 @@ class FinancialReports extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Back button
             Padding(
               padding: const EdgeInsets.only(left: 8, top: 8),
               child: IconButton(
@@ -43,7 +44,6 @@ class FinancialReports extends StatelessWidget {
 
             const SizedBox(height: 8),
 
-            // Main card
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
@@ -60,24 +60,21 @@ class FinancialReports extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    // Header
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 16,
-                      ),
+                          horizontal: 18, vertical: 16),
                       child: Row(
                         children: [
                           Container(
                             width: 42,
                             height: 42,
                             decoration: BoxDecoration(
-                              color: ClaimFlowColors.primary.withOpacity(0.1),
+                              color: iconColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(
-                              Icons.attach_money,
-                              color: ClaimFlowColors.primary,
+                            child: Icon(
+                              topicIcon,
+                              color: iconColor,
                               size: 22,
                             ),
                           ),
@@ -87,7 +84,7 @@ class FinancialReports extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Financial Reports',
+                                  topicTitle,
                                   style: GoogleFonts.sourceSans3(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -109,7 +106,8 @@ class FinancialReports extends StatelessWidget {
                           ),
                           Icon(
                             Icons.keyboard_arrow_down,
-                            color: ClaimFlowColors.textPrimary.withOpacity(0.4),
+                            color:
+                                ClaimFlowColors.textPrimary.withOpacity(0.4),
                           ),
                         ],
                       ),
@@ -118,11 +116,9 @@ class FinancialReports extends StatelessWidget {
                     Divider(
                       height: 1,
                       thickness: 1,
-                      color:
-                          ClaimFlowColors.textPrimary.withOpacity(0.08),
+                      color: ClaimFlowColors.textPrimary.withOpacity(0.08),
                     ),
 
-                    // Articles
                     ...articles.asMap().entries.map((entry) {
                       final index = entry.key;
                       final article = entry.value;
@@ -131,8 +127,8 @@ class FinancialReports extends StatelessWidget {
                       return Column(
                         children: [
                           _ArticleRow(
-                            title: article['title']!,
-                            readTime: article['readTime']!,
+                            title: article.title,
+                            readTime: article.readTime,
                           ),
                           if (!isLast)
                             Divider(
@@ -161,10 +157,7 @@ class _ArticleRow extends StatefulWidget {
   final String title;
   final String readTime;
 
-  const _ArticleRow({
-    required this.title,
-    required this.readTime,
-  });
+  const _ArticleRow({required this.title, required this.readTime});
 
   @override
   State<_ArticleRow> createState() => _ArticleRowState();
@@ -180,7 +173,7 @@ class _ArticleRowState extends State<_ArticleRow> {
       onTapUp: (_) => setState(() => _pressed = false),
       onTapCancel: () => setState(() => _pressed = false),
       onTap: () {
-        // TODO: Navigate to article detail
+        // TODO: navigate to article detail
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 100),
@@ -208,8 +201,7 @@ class _ArticleRowState extends State<_ArticleRow> {
                     widget.readTime,
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: ClaimFlowColors.textPrimary
-                          .withOpacity(0.45),
+                      color: ClaimFlowColors.textPrimary.withOpacity(0.45),
                     ),
                   ),
                 ],
@@ -217,8 +209,7 @@ class _ArticleRowState extends State<_ArticleRow> {
             ),
             Icon(
               Icons.chevron_right,
-              color:
-                  ClaimFlowColors.textPrimary.withOpacity(0.3),
+              color: ClaimFlowColors.textPrimary.withOpacity(0.3),
               size: 20,
             ),
           ],

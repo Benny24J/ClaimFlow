@@ -16,6 +16,8 @@ class SigninMethodCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: onTap,
@@ -24,7 +26,9 @@ class SigninMethodCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? Colors.green : Colors.grey.shade300,
+            color: selected
+                ? theme.colorScheme.primary
+                : theme.colorScheme.outline,
             width: selected ? 2 : 1,
           ),
         ),
@@ -33,14 +37,18 @@ class SigninMethodCard extends StatelessWidget {
           children: [
             Icon(
               icon,
-              color: selected ? Colors.green : Colors.black,
+              color: selected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface,
             ),
             const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
                 fontWeight: FontWeight.w500,
-                color: selected ? Colors.green : Colors.black,
+                color: selected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface,
               ),
             ),
           ],

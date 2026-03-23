@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:claimflow_africa/dmodels/claim_model.dart';
-import 'package:claimflow_africa/widgets/claims/bottom_navigation_bar.dart';
 import 'package:claimflow_africa/dmodels/riskflag_model.dart';
+import 'package:claimflow_africa/utils/formatters.dart';
+import 'package:claimflow_africa/widgets/claims/bottom_navigation_bar.dart';
 import 'package:claimflow_africa/widgets/claims/riskflag_section.dart';
 import 'package:claimflow_africa/widgets/claims/claim_info_card.dart';
 import 'package:claimflow_africa/widgets/claims/claim_details_actions.dart';
@@ -17,6 +18,7 @@ class ClaimDetailsScreen extends StatelessWidget {
   });
 
   String get _overallRisk {
+    if (riskFlags.any((f) => f.severity == 'URGENT')) return 'URGENT';
     if (riskFlags.any((f) => f.severity == 'HIGH')) return 'HIGH';
     if (riskFlags.any((f) => f.severity == 'MEDIUM')) return 'MEDIUM';
     if (riskFlags.isNotEmpty) return 'LOW';
@@ -28,6 +30,7 @@ class ClaimDetailsScreen extends StatelessWidget {
 
   Color _riskColor(String severity) {
     switch (severity) {
+      case 'URGENT': return const Color(0xFF7B1FA2);
       case 'HIGH': return const Color(0xFFE53935);
       case 'MEDIUM': return const Color(0xFFF57C00);
       default: return const Color(0xFF43A047);
@@ -36,16 +39,12 @@ class ClaimDetailsScreen extends StatelessWidget {
 
   Color _riskBadgeBg(String severity) {
     switch (severity) {
+      case 'URGENT': return const Color(0xFFF3E5F5);
       case 'HIGH': return const Color(0xFFFFEBEE);
       case 'MEDIUM': return const Color(0xFFFFF3E0);
       default: return const Color(0xFFE8F5E9);
     }
   }
-
-  String _fmt(double amount) => amount.toStringAsFixed(0).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-        (m) => '${m[1]},',
-      );
 
   void _onFixIssue(BuildContext context, RiskFlag flag) {
     Navigator.pushNamed(context, '/new-claim', arguments: {
@@ -71,10 +70,7 @@ class ClaimDetailsScreen extends StatelessWidget {
     );
 
     if (confirmed == true && context.mounted) {
-      // TODO: await claimsRepository.submitClaim(claim);
       Navigator.pushNamed(context, '/claim-success', arguments: {
-        //'claimId': claim.displayId,
-        //'submittedAt': DateTime.now(),
         'claim': claim,
         'isSynced': false,
       });
@@ -105,7 +101,6 @@ class ClaimDetailsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -148,12 +143,11 @@ class ClaimDetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-           
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '₦${_fmt(claim.totalClaimAmount)}',
+                  formatNaira(claim.totalClaimAmount),
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.primary,
@@ -175,7 +169,6 @@ class ClaimDetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Risk flags
             if (riskFlags.isNotEmpty) ...[
               RiskFlagsSection(
                 flags: riskFlags,
@@ -187,7 +180,6 @@ class ClaimDetailsScreen extends StatelessWidget {
               const SizedBox(height: 16),
             ],
 
-            // Claim info
             ClaimInfoCard(claim: claim),
             const SizedBox(height: 100),
           ],

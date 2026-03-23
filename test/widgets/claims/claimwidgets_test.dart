@@ -1,3 +1,4 @@
+import 'package:claimflow_africa/widgets/claims/bottom_navigation_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:claimflow_africa/widgets/claims/claimwidgets.dart';

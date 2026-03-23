@@ -101,7 +101,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       children: [
                         Image.asset(
                           item.imageAsset,
-                          height: 450, 
+                          height: 300, 
                            width: double.infinity,
                            fit: BoxFit.fill, 
 

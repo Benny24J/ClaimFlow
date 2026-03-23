@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:claimflow_africa/dmodels/claim_model.dart';
-import 'package:claimflow_africa/dmodels/riskflag_model.dart';
+import 'package:claimflow_africa/services/risk_evaluator.dart';
 import 'package:claimflow_africa/widgets/newdashboard/setup_complete_banner.dart';
 import 'package:claimflow_africa/widgets/newdashboard/new_claim_card.dart';
 import 'package:claimflow_africa/widgets/newdashboard/stats_row.dart';
 import 'package:claimflow_africa/widgets/newdashboard/new_user_section.dart';
+import 'package:claimflow_africa/widgets/claims/bottom_navigation_bar.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DashboardScreen extends StatefulWidget {
   final bool justCompletedSetup;
@@ -20,111 +22,77 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  int _currentNavIndex = 0;
-
   bool _showSetupBanner = false;
   bool _showNewUserSection = true;
+
+  final supabase = Supabase.instance.client;
+  String? _fullName;
 
   @override
   void initState() {
     super.initState();
     _showSetupBanner = widget.justCompletedSetup;
+    _loadUserProfile();
   }
 
-  List<RiskFlag> _evaluateRisks(ClaimModel claim) {
-    final List<RiskFlag> flags = [];
+  // ─── Load name + avatar from Supabase ────────────────────────────────────
 
-    if (claim.nhiaId.isEmpty) {
-      flags.add(RiskFlag(
-        title: 'Missing NHIA ID',
-        description: 'This claim has no NHIA ID assigned.',
-        severity: 'URGENT',
-        impact: claim.totalClaimAmount,
-        stepToFix: 1,
-      ));
+  Future<void> _loadUserProfile() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final data = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+
+      if (mounted) {
+        setState(() {
+          _fullName = data['full_name'] as String?;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load profile: $e');
     }
+  }
 
-    if (claim.diagnosisCode.isEmpty) {
-      flags.add(RiskFlag(
-        title: 'Missing Clinical Data',
-        description: 'Diagnosis code is missing.',
-        severity: 'HIGH',
-        impact: claim.totalClaimAmount,
-        stepToFix: 2,
-      ));
-    }
+  // ─── Greeting based on time of day ───────────────────────────────────────
 
-    if (claim.procedureCode.isEmpty) {
-      flags.add(RiskFlag(
-        title: 'Invalid Provider Code',
-        description: 'Procedure code is missing or invalid.',
-        severity: 'HIGH',
-        impact: claim.totalClaimAmount,
-        stepToFix: 3,
-      ));
-    }
+  String get _greeting {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
 
-    if (claim.totalClaimAmount > 100000) {
-      flags.add(RiskFlag(
-        title: 'High Value Claim',
-        description: 'Claim amount exceeds ₦100,000 threshold.',
-        severity: 'MEDIUM',
-        impact: claim.totalClaimAmount,
-        stepToFix: 4,
-      ));
-    }
-
-    if (claim.diagnosisCode.isNotEmpty &&
-        claim.procedureCode.isNotEmpty &&
-        claim.diagnosisCode == claim.procedureCode) {
-      flags.add(RiskFlag(
-        title: 'Mismatched Codes',
-        description: 'Diagnosis and procedure codes are identical.',
-        severity: 'MEDIUM',
-        impact: claim.totalClaimAmount,
-        stepToFix: 2,
-      ));
-    }
-
-    return flags;
+  // Returns first name only, falls back to 'there'
+  String get _firstName {
+    if (_fullName == null || _fullName!.trim().isEmpty) return 'user';
+    return _fullName!.trim().split(' ').first;
   }
 
   void _dismissBanner() => setState(() => _showSetupBanner = false);
   void _dismissNewUserSection() => setState(() => _showNewUserSection = false);
-
   void _onNewClaim() => Navigator.pushNamed(context, '/new-claim');
 
-  void _onNavTap(int index) {
-    setState(() => _currentNavIndex = index);
-    switch (index) {
-      case 0:
-        Navigator.pushNamed(context, '/organization');
-        break;
-      case 1:
-        Navigator.pushNamed(context, '/add-staff');
-        break;
-      case 2:
-        Navigator.pushNamed(context, '/billing');
-        break;
-    }
-  }
+  // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    
     return ValueListenableBuilder(
       valueListenable: Hive.box<ClaimModel>('claims').listenable(),
       builder: (context, Box<ClaimModel> box, _) {
         final claims = box.values.toList();
 
-        
         final int claimsSubmitted = claims.length;
         final int pendingReview = claims.where((c) => c.isPending).length;
         final int riskAlerts = claims.fold(
           0,
-          (total, claim) => total + _evaluateRisks(claim).length,
+          (total, claim) => total + RiskEvaluator.evaluate(claim).length,
         );
 
         return Scaffold(
@@ -136,6 +104,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ── Back button (only when coming from setup) ──────────
                   if (widget.justCompletedSetup)
                     IconButton(
                       icon: const Icon(Icons.arrow_back),
@@ -144,6 +113,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       alignment: Alignment.centerLeft,
                     ),
 
+                  // ── Profile header row ─────────────────────────────────
+                  Row(
+                    children: [
+                      // Greeting + name
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$_greeting,',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.5),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _firstName,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Avatar — tappable, navigates to profile
+                      GestureDetector(
+                        onTap: () =>
+                            Navigator.pushNamed(context, '/profile'),
+                        child:CircleAvatar(
+                                radius: 24,
+                                backgroundColor: theme.colorScheme.primary,
+                                child: Icon(Icons.person),
+                              )
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Setup banner ───────────────────────────────────────
                   if (_showSetupBanner) ...[
                     SetupCompleteBanner(onDismiss: _dismissBanner),
                     const SizedBox(height: 16),
@@ -164,42 +176,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   if (_showNewUserSection)
                     NewUserSection(
                       onDismiss: _dismissNewUserSection,
-                      onViewSampleClaim: () =>
-                          Navigator.pushNamed(context, '/sample-claim'),
-                      onLearnProcess: () =>
-                          Navigator.pushNamed(context, '/learn-process'),
-                      onInviteTeam: () =>
-                          Navigator.pushNamed(context, '/add-staff'),
+                      onViewSampleClaim: () {},
+                      onLearnProcess: () {},
+                      onInviteTeam: () {},
                     ),
                 ],
               ),
             ),
           ),
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: _currentNavIndex,
-            onTap: _onNavTap,
-            selectedItemColor: theme.colorScheme.primary,
-            unselectedItemColor: theme.colorScheme.onSurface.withAlpha(100),
-            showSelectedLabels: true,
-            showUnselectedLabels: true,
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.business_outlined),
-                activeIcon: Icon(Icons.business),
-                label: 'Organization',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.group_add_outlined),
-                activeIcon: Icon(Icons.group_add),
-                label: 'Add Staff',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.receipt_long_outlined),
-                activeIcon: Icon(Icons.receipt_long),
-                label: 'Billing',
-              ),
-            ],
-          ),
+          bottomNavigationBar: const AppBottomNav(currentIndex: 0),
         );
       },
     );

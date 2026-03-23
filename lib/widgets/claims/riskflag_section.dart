@@ -1,6 +1,6 @@
 import 'package:claimflow_africa/dmodels/riskflag_model.dart';
+import 'package:claimflow_africa/utils/formatters.dart';
 import 'package:flutter/material.dart';
-
 
 class RiskFlagsSection extends StatelessWidget {
   final List<RiskFlag> flags;
@@ -18,11 +18,6 @@ class RiskFlagsSection extends StatelessWidget {
     required this.riskBadgeBg,
   });
 
-  String _fmt(double amount) => amount.toStringAsFixed(0).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-        (m) => '${m[1]},',
-      );
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -37,7 +32,6 @@ class RiskFlagsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
             child: Row(
@@ -58,7 +52,7 @@ class RiskFlagsSection extends StatelessWidget {
                         size: 14, color: Color(0xFFE53935)),
                     const SizedBox(width: 4),
                     Text(
-                      '₦${_fmt(totalAtRisk)} at risk',
+                      '${formatNaira(totalAtRisk)} at risk',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: const Color(0xFFE53935),
                         fontWeight: FontWeight.bold,
@@ -70,7 +64,6 @@ class RiskFlagsSection extends StatelessWidget {
             ),
           ),
 
-          // Flag cards
           ...flags.map((flag) => RiskFlagCard(
                 flag: flag,
                 onFixIssue: () => onFixIssue(flag),
@@ -97,11 +90,6 @@ class RiskFlagCard extends StatelessWidget {
     required this.riskBadgeBg,
   });
 
-  String _fmt(double amount) => amount.toStringAsFixed(0).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-        (m) => '${m[1]},',
-      );
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -118,7 +106,6 @@ class RiskFlagCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-         
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -156,7 +143,6 @@ class RiskFlagCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
 
-          // Description
           Text(
             flag.description,
             style: theme.textTheme.bodySmall?.copyWith(
@@ -166,7 +152,6 @@ class RiskFlagCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -182,7 +167,7 @@ class RiskFlagCard extends StatelessWidget {
                       ),
                     ),
                     TextSpan(
-                      text: '₦${_fmt(flag.impact)}',
+                      text: formatNaira(flag.impact),
                       style: theme.textTheme.labelMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSurface,

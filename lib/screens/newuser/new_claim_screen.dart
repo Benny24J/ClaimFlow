@@ -6,7 +6,9 @@ import 'package:claimflow_africa/widgets/claims/patient_info.dart';
 import 'package:claimflow_africa/widgets/claims/treatment_details.dart';
 import 'package:claimflow_africa/widgets/claims/financial_summary.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:claimflow_africa/widgets/claims/bottom_navigation_bar.dart';
 import 'package:claimflow_africa/dmodels/claim_model.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class NewClaimScreen extends StatefulWidget {
   const NewClaimScreen({super.key});
@@ -26,12 +28,16 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
   bool _isLoadingRisk = false;
   Timer? _riskDebounce;
 
+  final supabase = Supabase.instance.client;
+
   @override
   void dispose() {
     _autoSaveTimer?.cancel();
     _riskDebounce?.cancel();
     super.dispose();
   }
+
+  // ─── Auto-save debounce ───────────────────────────────────────────────────
 
   void _onFieldChanged() {
     _autoSaveTimer?.cancel();
@@ -43,6 +49,8 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
     await Future.delayed(const Duration(milliseconds: 800));
     if (mounted) setState(() => _isSaving = false);
   }
+
+  // ─── Live risk debounce ───────────────────────────────────────────────────
 
   void _onAmountChanged(double amount) {
     _formData.totalClaimAmount = amount;
@@ -71,10 +79,17 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
     }
   }
 
+  // ─── Step navigation ──────────────────────────────────────────────────────
+
   void _nextStep() => setState(() => _currentStep++);
   void _prevStep() => setState(() => _currentStep--);
 
+  // ─── Save locally then sync to Supabase ──────────────────────────────────
+
   Future<void> _saveAndAnalyze() async {
+    setState(() => _isSaving = true);
+
+    // 1. Save to Hive immediately (works offline)
     final box = Hive.box<ClaimModel>('claims');
 
     final claim = ClaimModel()
@@ -89,22 +104,73 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
       ..insurer = _formData.insurer
       ..totalClaimAmount = _formData.totalClaimAmount
       ..notes = _formData.notes
+      // ..riskLevel = _liveRisk?.riskLevel
+      // ..riskExposure = _liveRisk?.exposure
+      // ..riskConfidence = _liveRisk?.confidence
       ..syncStatus = ClaimSyncStatus.pendingSync.name
       ..createdAt = DateTime.now();
 
     await box.add(claim);
-    print(' Claim saved locally: ${claim.localId}');
+
+    // 2. Attempt Supabase sync
+    bool isSynced = false;
+
+    try {
+      final user = supabase.auth.currentUser;
+
+      if (user != null) {
+        await supabase.from('claims').insert({
+
+          'full_name':          _formData.fullName,
+          'nhia_id':            _formData.nhiaId,
+          'date_of_birth':      _formData.dateOfBirth?.toIso8601String(),
+          'gender':             _formData.gender,
+
+          'diagnosis_code':     _formData.diagnosisCode,
+          'procedure_code':     _formData.procedureCode,
+          'service_date':       _formData.serviceDate?.toIso8601String(),
+          'insurer':            _formData.insurer,
+
+          'total_claim_amount': _formData.totalClaimAmount,
+          'notes': _formData.notes.isEmpty ? null : _formData.notes,
+          'risk_level':         _liveRisk?.riskLevel,
+          'risk_exposure':      _liveRisk?.exposure,
+          'risk_confidence':    _liveRisk?.confidence,
+
+          'created_by':         user.id,
+        });
+
+        // Update Hive record to reflect successful sync
+        claim.syncStatus = ClaimSyncStatus.synced.name;
+        await claim.save();
+        isSynced = true;
+      }
+    } on AuthException catch (e) {
+      // Not logged in — claim stays as pendingSync in Hive
+      debugPrint('Auth error during sync: ${e.message}');
+    } on PostgrestException catch (e) {
+      // Supabase DB error — claim stays as pendingSync in Hive
+      debugPrint('Supabase error during sync: ${e.message}');
+    } catch (e) {
+      // Network or unknown error — claim stays as pendingSync in Hive
+      debugPrint('Unexpected sync error: $e');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
 
     if (!mounted) return;
+
     Navigator.pushNamed(
       context,
       '/claim-success',
       arguments: {
         'claim': claim,
-        'isSynced': false,
+        'isSynced': isSynced,
       },
     );
   }
+
+  // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
